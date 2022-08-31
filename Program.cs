@@ -12,7 +12,7 @@ namespace PacketGenerator
 			for (int i = 0; i < lines.Length; i++)
 			{
 				var line = lines[i];
-				if (line.Contains("_") == false) continue;
+				if ((line.Contains("public class") && line.Contains("_")) == false) continue;
 				var startIndex = line.IndexOf("_") - 1;
 				var endIndex = line.IndexOf(" :");
 				packetNames.Add(line.Substring(startIndex, endIndex - startIndex));
@@ -64,7 +64,7 @@ namespace PacketGenerator
 			{
 				var startIndex = serverPacketHandlerLines.FindIndex(line => line.Contains("static PacketHandler()")) + 3;
 				var endIndex = serverPacketHandlerLines.FindIndex(line => line.Contains("\t\t}"));
-				var format = "_handlerDict.TryAdd(PacketId.{0}, packet => {0}Handle(packet));";
+				var format = "_handlerDict.TryAdd(PacketId.{0}, (packet, session) => {0}Handle(packet, session));";
 				serverPacketHandlerLines.RemoveRange(startIndex, endIndex - startIndex);
 				foreach (var name in packetNames)
 				{
@@ -75,7 +75,7 @@ namespace PacketGenerator
 					if (methodStart != -1) continue;
 					methodStart = serverPacketHandlerLines.FindLastIndex(line => line.Contains("\t}"));
 					serverPacketHandlerLines.Insert(methodStart++, "");
-					serverPacketHandlerLines.Insert(methodStart++, $"\t\tprivate static void {name}Handle(BasePacket packet)");
+					serverPacketHandlerLines.Insert(methodStart++, $"\t\tprivate static void {name}Handle(BasePacket packet, Session session)");
 					serverPacketHandlerLines.Insert(methodStart++, "\t\t{");
 					serverPacketHandlerLines.Insert(methodStart++, $"\t\t\tpacket = packet as {name};");
 					serverPacketHandlerLines.Insert(methodStart++, "\t\t}");
@@ -91,7 +91,7 @@ namespace PacketGenerator
 			{
 				var startIndex = clientPacketHandlerLines.FindIndex(line => line.Contains("static PacketHandler()")) + 3;
 				var endIndex = clientPacketHandlerLines.FindIndex(line => line.Contains("\t}"));
-				var format = "_handlerDict.TryAdd(PacketId.{0}, packet => {0}Handle(packet));";
+				var format = "_handlerDict.TryAdd(PacketId.{0}, (packet,session) => {0}Handle(packet, session));";
 				clientPacketHandlerLines.RemoveRange(startIndex, endIndex - startIndex);
 				foreach (var name in packetNames)
 				{
@@ -102,7 +102,7 @@ namespace PacketGenerator
 					if (methodStart != -1) continue;
 					methodStart = clientPacketHandlerLines.FindLastIndex(line => line.Contains("}"));
 					clientPacketHandlerLines.Insert(methodStart++, "");
-					clientPacketHandlerLines.Insert(methodStart++, $"\tprivate static void {name}Handle(BasePacket packet)");
+					clientPacketHandlerLines.Insert(methodStart++, $"\tprivate static void {name}Handle(BasePacket packet, Session session)");
 					clientPacketHandlerLines.Insert(methodStart++, "\t{");
 					clientPacketHandlerLines.Insert(methodStart++, $"\t\tpacket = packet as {name};");
 					clientPacketHandlerLines.Insert(methodStart++, "\t}");
