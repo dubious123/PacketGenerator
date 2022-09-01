@@ -7,16 +7,24 @@ namespace PacketGenerator
 	{
 		static void Main(string[] args)
 		{
-			var lines = File.ReadAllLines("../../../Packets.cs");
+			var packetsPath = "../../../Packets.cs";
+			var lines = File.ReadAllLines(packetsPath);
 			var packetNames = new List<string>();
+			int clientCount = 0;
+			int serverCount = 0;
 			for (int i = 0; i < lines.Length; i++)
 			{
 				var line = lines[i];
 				if ((line.Contains("public class") && line.Contains("_")) == false) continue;
 				var startIndex = line.IndexOf("_") - 1;
 				var endIndex = line.IndexOf(" :");
-				packetNames.Add(line.Substring(startIndex, endIndex - startIndex));
+				var name = line.Substring(startIndex, endIndex - startIndex);
+				packetNames.Add(name);
+
+				i += 4;
+				lines[i] = name.Contains("C_") ? $"\t\t\tId = 0x0{clientCount++:X3};" : $"\t\t\tId = 0x1{serverCount++:X3};";
 			}
+			File.WriteAllLines(packetsPath, lines);
 			#region Packets
 			var serverPacketsPath = "../../../../Mockup_BrawlStars_Server/ServerCore/Packets/Packets.cs";
 			var clientPacketsPath = "../../../../Mockup_BrawlStars/Assets/02.Scripts/Network/ServerCore/Packets/Packets.cs";
@@ -32,11 +40,7 @@ namespace PacketGenerator
 			var clientEnumPath = "../../../../Mockup_BrawlStars/Assets/02.Scripts/Network/ServerCore/Utils/Enums.cs";
 			var serverEnumLines = new List<string>(File.ReadAllLines(serverEnumPath));
 			var clientEnumLines = new List<string>(File.ReadAllLines(clientEnumPath));
-			//1 : s_를 만난다.
-			//2 : enum에 추가한다.
-			//3 : PacketParser에 추가한다.
-			//4 : packetHandler에 추가한다.
-			//5 : Packets를 추가한다.
+
 
 			EditEnum(packetNames, serverEnumLines);
 			EditEnum(packetNames, clientEnumLines);
@@ -77,7 +81,7 @@ namespace PacketGenerator
 					serverPacketHandlerLines.Insert(methodStart++, "");
 					serverPacketHandlerLines.Insert(methodStart++, $"\t\tprivate static void {name}Handle(BasePacket packet, Session session)");
 					serverPacketHandlerLines.Insert(methodStart++, "\t\t{");
-					serverPacketHandlerLines.Insert(methodStart++, $"\t\t\tpacket = packet as {name};");
+					serverPacketHandlerLines.Insert(methodStart++, $"\t\t\tvar req = packet as {name};");
 					serverPacketHandlerLines.Insert(methodStart++, "\t\t}");
 
 				}
@@ -104,7 +108,7 @@ namespace PacketGenerator
 					clientPacketHandlerLines.Insert(methodStart++, "");
 					clientPacketHandlerLines.Insert(methodStart++, $"\tprivate static void {name}Handle(BasePacket packet, Session session)");
 					clientPacketHandlerLines.Insert(methodStart++, "\t{");
-					clientPacketHandlerLines.Insert(methodStart++, $"\t\tpacket = packet as {name};");
+					clientPacketHandlerLines.Insert(methodStart++, $"\t\tvar req = packet as {name};");
 					clientPacketHandlerLines.Insert(methodStart++, "\t}");
 				}
 
@@ -123,9 +127,12 @@ namespace PacketGenerator
 			var startIndex = lines.FindIndex(line => line.Contains("PacketId")) + 2;
 			var endIndex = lines.FindIndex(line => line.Contains("}"));
 			lines.RemoveRange(startIndex, endIndex - startIndex);
+			int clientCount = 0;
+			int serverCount = 0;
 			foreach (var name in names)
 			{
-				lines.Insert(startIndex++, "\t\t\t" + name + ',');
+				var line = name.Contains("C_") ? $"\t\t\t{name} = 0x0{clientCount++:X3}," : $"\t\t\t{name} = 0x1{serverCount++:X3},";
+				lines.Insert(startIndex++, line);
 			}
 		}
 		public static void EditParser(List<string> names, List<string> lines, string indent, int offset, string format)
