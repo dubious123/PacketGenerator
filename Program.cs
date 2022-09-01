@@ -91,7 +91,7 @@ namespace PacketGenerator
 			{
 				var startIndex = clientPacketHandlerLines.FindIndex(line => line.Contains("static PacketHandler()")) + 3;
 				var endIndex = clientPacketHandlerLines.FindIndex(line => line.Contains("\t}"));
-				var format = "_handlerDict.TryAdd(PacketId.{0}, (packet,session) => {0}Handle(packet, session));";
+				var format = "_handlerDict.TryAdd(PacketId.{0}, (packet,session) => PacketQueue.Push(() => {0}Handle(packet, session)));";
 				clientPacketHandlerLines.RemoveRange(startIndex, endIndex - startIndex);
 				foreach (var name in packetNames)
 				{
