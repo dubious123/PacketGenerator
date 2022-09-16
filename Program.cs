@@ -32,6 +32,14 @@ namespace PacketGenerator
 			//var clientPacketssLines = new List<string>(File.ReadAllLines(clientPacketsPath));
 
 			File.WriteAllLines(serverPacketsPath, lines);
+			for (int i = 0; i < lines.Length; i++)
+			{
+				var line = lines[i];
+				if (line.Contains("using System.Numerics;") == false) continue;
+
+				lines[i] = "using UnityEngine;";
+				break;
+			}
 			File.WriteAllLines(clientPacketsPath, lines);
 			#endregion
 
@@ -52,8 +60,8 @@ namespace PacketGenerator
 			var clientParserPath = "../../../../Mockup_BrawlStars/Assets/02.Scripts/Network/PacketParser.cs";
 			var serverParserLines = new List<string>(File.ReadAllLines(serverParserPath));
 			var clientParserLines = new List<string>(File.ReadAllLines(clientParserPath));
-			EditParser(packetNames, serverParserLines, "\t\t", 2, "_readDict.TryAdd((ushort)PacketId.{0}, arr => JsonSerializer.Deserialize<{0}>(arr, _options));");
-			EditParser(packetNames, clientParserLines, "\t", 1, "_readDict.TryAdd((ushort)PacketId.{0}, json => JsonUtility.FromJson<{0}>(json));");
+			EditParser(packetNames, serverParserLines, "\t\t", 0, "_readDict.TryAdd((ushort)PacketId.{0}, arr => JsonSerializer.Deserialize<{0}>(arr, _options));");
+			EditParser(packetNames, clientParserLines, "\t", 0, "_readDict.TryAdd((ushort)PacketId.{0}, json => JsonUtility.FromJson<{0}>(json));");
 			File.WriteAllLines(serverParserPath, serverParserLines);
 			File.WriteAllLines(clientParserPath, clientParserLines);
 			#endregion
@@ -79,7 +87,7 @@ namespace PacketGenerator
 					if (methodStart != -1) continue;
 					methodStart = serverPacketHandlerLines.FindLastIndex(line => line.Contains("\t}"));
 					serverPacketHandlerLines.Insert(methodStart++, "");
-					serverPacketHandlerLines.Insert(methodStart++, $"\t\tprivate static void {name}Handle(BasePacket packet, Session session)");
+					serverPacketHandlerLines.Insert(methodStart++, $"\t\tprivate static void {name}Handle(BasePacket packet, ClientSession session)");
 					serverPacketHandlerLines.Insert(methodStart++, "\t\t{");
 					serverPacketHandlerLines.Insert(methodStart++, $"\t\t\tvar req = packet as {name};");
 					serverPacketHandlerLines.Insert(methodStart++, "\t\t}");
@@ -137,8 +145,8 @@ namespace PacketGenerator
 		}
 		public static void EditParser(List<string> names, List<string> lines, string indent, int offset, string format)
 		{
-			var startIndex = lines.FindIndex(line => line.Contains("static PacketParser()")) + 2 + offset;
-			var endIndex = lines.FindIndex(line => line.Contains(indent + "}"));
+			var startIndex = lines.FindIndex(line => line.Contains("_readDict = new ConcurrentDictionary<ushort, ")) + 1 + offset;
+			var endIndex = lines.FindIndex(startIndex, line => line.Contains(indent + "}"));
 			lines.RemoveRange(startIndex, endIndex - startIndex);
 			foreach (var name in names)
 			{
