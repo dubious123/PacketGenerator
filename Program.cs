@@ -8,6 +8,8 @@ namespace PacketGenerator
 		static void Main(string[] args)
 		{
 			var packetsPath = "../../../Packets.cs";
+			var clientPacketLines = new LinkedList<string>();
+			var serverPacketLines = new LinkedList<string>();
 			var lines = File.ReadAllLines(packetsPath);
 			var packetNames = new List<string>();
 			int clientCount = 0;
@@ -24,23 +26,184 @@ namespace PacketGenerator
 				i += 4;
 				lines[i] = name.Contains("C_") ? $"\t\t\tId = 0x0{clientCount++:X3};" : $"\t\t\tId = 0x1{serverCount++:X3};";
 			}
+
+			int index = 0;
+			//C_가 포함된 line까지 두 linkedlist에 넣는다.
+			for (index = 0; lines[index].Contains("C_") == false; index++)
+			{
+				var line = lines[index];
+				if (line.Contains("#region Server"))
+				{
+					for (index++; lines[index] != "#endregion"; index++)
+					{
+						serverPacketLines.AddLast(lines[index]);
+					}
+					continue;
+				}
+				if (line.Contains("#region Client"))
+				{
+					for (index++; lines[index] != "#endregion"; index++)
+					{
+						clientPacketLines.AddLast(lines[index]);
+					}
+					continue;
+				}
+				if (lines[index].Contains("namespace"))
+				{
+					serverPacketLines.AddLast(line);
+					serverPacketLines.AddLast(lines[++index]);
+					continue;
+				}
+				clientPacketLines.AddLast(line);
+				serverPacketLines.AddLast(line);
+
+			}
+
+			//C_가 포함되어있으면 client에는 생성자가 포함되게, server에는 생성자가 포함 안되게 넣는다.
+			for (int i = index; i < lines.Length;)
+			{
+				var line = lines[i];
+				if (line.Contains("public class C_"))
+				{
+					//2줄 넣기
+					clientPacketLines.AddLast(lines[i]);
+					serverPacketLines.AddLast(lines[i++]);
+					clientPacketLines.AddLast(lines[i]);
+					serverPacketLines.AddLast(lines[i++]);
+					for (; line != "\t}";)
+					{
+						line = lines[i];
+						//생성자는 client만 넣기
+						if (line.Contains("\t\tpublic C_"))
+						{
+							for (; line != "\t\t}"; line = lines[++i])
+							{
+								clientPacketLines.AddLast(line);
+							}
+							clientPacketLines.AddLast(line);
+							i++;
+						}
+						//struct 
+						else if (line.Contains("public struct"))
+						{
+							//2줄 넣기
+							clientPacketLines.AddLast(lines[i]);
+							serverPacketLines.AddLast(lines[i++]);
+							clientPacketLines.AddLast(lines[i]);
+							serverPacketLines.AddLast(lines[i++]);
+							//struct 생성자
+							line = lines[i];
+							for (; line != "\t\t\t}"; line = lines[++i])
+							{
+								clientPacketLines.AddLast(line);
+							}
+							clientPacketLines.AddLast(line);
+							i++;
+
+							//struct 나머지
+							for (; line != "\t\t}";)
+							{
+								line = lines[i++];
+								clientPacketLines.AddLast(line);
+								serverPacketLines.AddLast(line);
+							}
+						}
+						else
+						{
+							clientPacketLines.AddLast(lines[i]);
+							serverPacketLines.AddLast(lines[i++]);
+						}
+					}
+				}
+				else if (line.Contains("public class S_"))
+				{
+					//2줄 넣기
+					clientPacketLines.AddLast(lines[i]);
+					serverPacketLines.AddLast(lines[i++]);
+					clientPacketLines.AddLast(lines[i]);
+					serverPacketLines.AddLast(lines[i++]);
+					for (; line != "\t}";)
+					{
+						//생성자는 client만 넣기
+						line = lines[i];
+						if (line.Contains("\t\tpublic S_"))
+						{
+							for (; line != "\t\t}"; line = lines[++i])
+							{
+								serverPacketLines.AddLast(line);
+							}
+							serverPacketLines.AddLast(line);
+							i++;
+						}
+						//struct 
+						else if (line.Contains("public struct"))
+						{
+							//2줄 넣기
+							clientPacketLines.AddLast(lines[i]);
+							serverPacketLines.AddLast(lines[i++]);
+							clientPacketLines.AddLast(lines[i]);
+							serverPacketLines.AddLast(lines[i++]);
+							//struct 생성자
+							line = lines[i];
+							for (; line != "\t\t\t}"; line = lines[++i])
+							{
+								serverPacketLines.AddLast(line);
+							}
+							serverPacketLines.AddLast(line);
+							i++;
+
+							//struct 나머지
+							for (; line != "\t\t}";)
+							{
+								line = lines[i++];
+								clientPacketLines.AddLast(line);
+								serverPacketLines.AddLast(line);
+							}
+						}
+						else
+						{
+							clientPacketLines.AddLast(lines[i]);
+							serverPacketLines.AddLast(lines[i++]);
+						}
+					}
+				}
+				else
+				{
+					if (line == "}")
+					{
+						clientPacketLines.AddLast(line);
+						serverPacketLines.AddLast(line);
+					}
+					i++;
+				}
+			}
+
+
+
 			File.WriteAllLines(packetsPath, lines);
 			#region Packets
-			var serverPacketsPath = "../../../../Mockup_BrawlStars_Server/ServerCore/Packets/Packets.cs";
-			var clientPacketsPath = "../../../../Mockup_BrawlStars/Assets/02.Scripts/Network/ServerCore/Packets/Packets.cs";
+			var serverPacketsPath = "../../../../Mockup_BrawlStars_Server/Server/Packets.cs";
+			var clientPacketsPath = "../../../../Mockup_BrawlStars/Assets/02.Scripts/Network//Packets.cs";
 			//var serverPacketsLines = new List<string>(File.ReadAllLines(serverPacketsPath));
 			//var clientPacketssLines = new List<string>(File.ReadAllLines(clientPacketsPath));
 
-			File.WriteAllLines(serverPacketsPath, lines);
-			for (int i = 0; i < lines.Length; i++)
+			File.WriteAllLines(serverPacketsPath, serverPacketLines);
+			for (LinkedListNode<string> node = clientPacketLines.First; node != null; node = node.Next)
 			{
-				var line = lines[i];
-				if (line.Contains("using System.Numerics;") == false) continue;
-
-				lines[i] = "using UnityEngine;";
-				break;
+				if (node.Value.StartsWith("\t"))
+				{
+					node.Value = node.Value[1..];
+					continue;
+				}
+				if (node.Value == "}")
+				{
+					clientPacketLines.Remove(node);
+					continue;
+				}
 			}
-			File.WriteAllLines(clientPacketsPath, lines);
+
+
+			File.WriteAllLines(clientPacketsPath, clientPacketLines);
 			#endregion
 
 			#region Enums
