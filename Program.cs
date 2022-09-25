@@ -17,7 +17,7 @@ namespace PacketGenerator
 			for (int i = 0; i < lines.Length; i++)
 			{
 				var line = lines[i];
-				if ((line.Contains("public class") && line.Contains("_")) == false) continue;
+				if (((line.Contains("public class") || line.Contains("public struct")) && line.Contains("_")) == false) continue;
 				var startIndex = line.IndexOf("_") - 1;
 				var endIndex = line.IndexOf(" :");
 				var name = line.Substring(startIndex, endIndex - startIndex);
@@ -63,7 +63,7 @@ namespace PacketGenerator
 			for (int i = index; i < lines.Length;)
 			{
 				var line = lines[i];
-				if (line.Contains("public class C_"))
+				if (line.Contains("public class C_") || line.Contains("public struct C_"))
 				{
 					//2줄 넣기
 					clientPacketLines.AddLast(lines[i]);
@@ -115,7 +115,7 @@ namespace PacketGenerator
 						}
 					}
 				}
-				else if (line.Contains("public class S_"))
+				else if (line.Contains("public class S_") || line.Contains("public struct S_"))
 				{
 					//2줄 넣기
 					clientPacketLines.AddLast(lines[i]);
@@ -266,7 +266,7 @@ namespace PacketGenerator
 			{
 				var startIndex = clientPacketHandlerLines.FindIndex(line => line.Contains("static PacketHandler()")) + 3;
 				var endIndex = clientPacketHandlerLines.FindIndex(startIndex, line => line.Contains("\t}"));
-				var format = "_handlerDict.TryAdd(PacketId.{0}, (packet,session) => PacketQueue.Push(() => {0}Handle(packet, session)));";
+				var format = "_handlerDict.TryAdd(PacketId.{0}, (packet,session) => {0}Handle(packet, session));";
 				clientPacketHandlerLines.RemoveRange(startIndex, endIndex - startIndex);
 				foreach (var name in packetNames)
 				{
@@ -277,7 +277,7 @@ namespace PacketGenerator
 					if (methodStart != -1) continue;
 					methodStart = clientPacketHandlerLines.FindLastIndex(line => line.Contains("}"));
 					clientPacketHandlerLines.Insert(methodStart++, "");
-					clientPacketHandlerLines.Insert(methodStart++, $"\tprivate static void {name}Handle(BasePacket packet, Session session)");
+					clientPacketHandlerLines.Insert(methodStart++, $"\tprivate static void {name}Handle(BasePacket packet, ServerSession session)");
 					clientPacketHandlerLines.Insert(methodStart++, "\t{");
 					clientPacketHandlerLines.Insert(methodStart++, $"\t\tvar req = packet as {name};");
 					clientPacketHandlerLines.Insert(methodStart++, "\t}");

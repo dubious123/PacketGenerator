@@ -1,10 +1,12 @@
 #region Server using
+using System;
 using Server.Game;
 using ServerCore;
 using System.Numerics;
 #endregion
 
 #region Client using
+using System;
 using ServerCore;
 using UnityEngine;
 #endregion
@@ -52,16 +54,22 @@ namespace Server
 		}
 		public ushort CharacterType;
 	}
-	public class C_BroadcastPlayerState : GamePacket
+	public class C_BroadcastPlayerInput : GamePacket
 	{
-		public C_BroadcastPlayerState(int userId)
+		public C_BroadcastPlayerInput(int userId, long startTick, Vector2 moveInput, Vector2 lookInput)
 		{
 			Id = 0x0004;
 			UserId = userId;
+			StartTick = startTick;
+			MoveDirX = moveInput.x;
+			MoveDirY = moveInput.y;
+			LookDirX = lookInput.x;
+			LookDirY = lookInput.y;
 		}
 		public short TeamId;
-		public float PosX;
-		public float PosY;
+		public long StartTick;
+		public float MoveDirX;
+		public float MoveDirY;
 		public float LookDirX;
 		public float LookDirY;
 	}
@@ -102,11 +110,12 @@ namespace Server
 				PlayerInfoArr[i] = new PlayerInfoDto(playerInfoArr[i]);
 			}
 		}
+		[Serializable]
 		public struct PlayerInfoDto
 		{
 			public PlayerInfoDto(Player player)
 			{
-				CharacterType = player is null ? (ushort)0 : (ushort)player.CharacterType;
+				CharacterType = player is null ? (ushort)0 : (ushort)player.Character.CharacterType;
 			}
 			public ushort CharacterType;
 		}
@@ -126,21 +135,31 @@ namespace Server
 	}
 	public class S_BroadcastGameState : BasePacket
 	{
-		public S_BroadcastGameState(int roomId, ushort playerCount)
+		public S_BroadcastGameState()
 		{
 			Id = 0x1005;
-			PlayerPosArr = new Vector2[6];
+			PlayerMoveDirArr = new Vector2[6];
 			PlayerLookDirArr = new Vector2[6];
-			RoomId = roomId;
-			PlayerCount = playerCount;
 		}
-		public int RoomId;
-		public Vector2[] PlayerPosArr;
+		public long StartTick;
+		public long TargetTick;
+		public Vector2[] PlayerMoveDirArr;
 		public Vector2[] PlayerLookDirArr;
 
-		public ushort PlayerCount;
 
-
+	}
+	public class S_BroadcastMove : BasePacket
+	{
+		public S_BroadcastMove(short teamId, Vector2 moveDir, Vector2 lookDir)
+		{
+			Id = 0x1006;
+			TeamId = teamId;
+			MoveDir = moveDir;
+			LookDir = lookDir;
+		}
+		public Vector2 MoveDir;
+		public Vector2 LookDir;
+		public short TeamId;
 	}
 
 }
