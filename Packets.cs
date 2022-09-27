@@ -64,7 +64,7 @@ namespace Server
 	}
 	public class C_BroadcastPlayerInput : GamePacket
 	{
-		public C_BroadcastPlayerInput(int userId, long startTick, Vector2 moveInput, Vector2 lookInput)
+		public C_BroadcastPlayerInput(int userId, long startTick, Vector2 moveInput, Vector2 lookInput, byte mousePressed)
 		{
 			Id = 0x0005;
 			UserId = userId;
@@ -73,7 +73,9 @@ namespace Server
 			MoveDirY = moveInput.y;
 			LookDirX = lookInput.x;
 			LookDirY = lookInput.y;
+			MousePressed = mousePressed;
 		}
+		public byte MousePressed;
 		public short TeamId;
 		public long StartTick;
 		public float MoveDirX;
@@ -157,11 +159,13 @@ namespace Server
 			Id = 0x1006;
 			PlayerMoveDirArr = new Vector2[6];
 			PlayerLookDirArr = new Vector2[6];
+			MousePressed = new ushort[6];
 		}
 		public long StartTick;
 		public long TargetTick;
 		public Vector2[] PlayerMoveDirArr;
 		public Vector2[] PlayerLookDirArr;
+		public ushort[] MousePressed;
 
 
 	}
